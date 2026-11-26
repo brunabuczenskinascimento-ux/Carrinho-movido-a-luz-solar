@@ -1,351 +1,119 @@
-Python
-
-import pygame
-import random
-import sys
-
-pygame.init()
-
-# Tela
-LARGURA = 800
-ALTURA = 600
-tela = pygame.display.set_mode((LARGURA, ALTURA))
-pygame.display.set_caption("SUPER CARRINHO SOLAR")
-
-relogio = pygame.time.Clock()
-
-# Cores
-AZUL = (100, 180, 220)
-VERDE = (30, 210, 65)
-VERDE_ESCURO = (15, 120, 40)
-PRETO = (15, 15, 20)
-BRANCO = (245, 245, 220)
-AMARELO = (255, 220, 0)
-CINZA = (65, 85, 100)
-VERMELHO = (220, 30, 40)
-
-fonte = pygame.font.SysFont("Arial", 25, bold=True)
-
-# Jogador
-carro_x = 400
-carro_y = 465
-velocidade = 6
-
-energia = 100
-pontos = 0
-distancia = 0
-
-obstaculos = []
-sois = []
-
-velocidade_pista = 6
-tempo = 0
-
-game_over = False
-
-# Posição da estrada
-def centro_estrada(y):
-    return 400
-
-def largura_estrada(y):
-    return 70 + (y / ALTURA) * 650
-
-# Desenhar cenário
-def desenhar_cenario():
-
-    tela.fill((100, 180, 220))
-
-    # Sol no céu
-    pygame.draw.circle(tela, AMARELO, (680, 65), 35)
-
-    # Prédios
-    for lado in [0, 1]:
-        for i in range(8):
-            x = i * 55
-
-            if lado == 0:
-                predio = pygame.Rect(x, 70, 48, 330)
-            else:
-                predio = pygame.Rect(752 - x, 70, 48, 330)
-
-            cor = random.choice([
-                (40, 50, 75),
-                (60, 65, 85),
-                (35, 70, 90)
-            ])
-
-            pygame.draw.rect(tela, cor, predio)
-
-            # Janelas
-            for j in range(4):
-                for k in range(6):
-                    wx = predio.x + 8 + j * 10
-                    wy = predio.y + 15 + k * 45
-
-                    pygame.draw.rect(
-                        tela, (180, 190, 150),
-                        (wx, wy, 6, 12)
-                    )
-
-    # Estrada
-    pygame.draw.polygon(
-        tela, CINZA,
-        [(370, 90), (430, 90), (800, 600), (0, 600)]
-    )
-
-    # Calçadas
-    pygame.draw.polygon(
-        tela, (90, 95, 110),
-        [(340, 90), (370, 90), (0, 600), (0, 600)]
-    )
-
-    pygame.draw.polygon(
-        tela, (90, 95, 110),
-        [(430, 90), (460, 90), (800, 600), (800, 600)]
-    )
-
-    # Laterais da pista
-    pygame.draw.line(tela, BRANCO, (370, 90), (0, 600), 4)
-    pygame.draw.line(tela, BRANCO, (430, 90), (800, 600), 4)
-
-    # Linhas da pista
-    for i in range(9):
-        y = (i * 75 + tempo * 5) % 600
-
-        largura = largura_estrada(y)
-        centro = 400
-
-        for posicao in [1/3, 2/3]:
-            x = centro - largura / 2 + largura * posicao
-
-            tamanho = max(2, int(y / 35))
-
-            pygame.draw.line(
-                tela, BRANCO,
-                (400 + (x - 400) * 0.2, 90),
-                (x, y),
-                tamanho
-            )
-
-# Desenhar carrinho solar
-def desenhar_carrinho(x, y):
-
-    # Sombra
-    pygame.draw.ellipse(
-        tela, (20, 30, 40),
-        (x - 48, y + 25, 100, 30)
-    )
-
-    # Rodas
-    pygame.draw.rect(
-        tela, PRETO, (x - 48, y - 5, 22, 65),
-        border_radius=7
-    )
-
-    pygame.draw.rect(
-        tela, PRETO, (x + 26, y - 5, 22, 65),
-        border_radius=7
-    )
-
-    # Base verde do carrinho
-    pygame.draw.polygon(
-        tela, VERDE,
-        [
-            (x - 42, y + 5),
-            (x - 35, y - 30),
-            (x + 35, y - 30),
-            (x + 42, y + 5),
-            (x + 42, y + 35),
-            (x - 42, y + 35)
-        ]
-    )
-
-    # Placa solar
-    pygame.draw.polygon(
-        tela, (15, 35, 75),
-        [
-            (x - 29, y - 25),
-            (x + 29, y - 25),
-            (x + 27, y + 12),
-            (x - 27, y + 12)
-        ]
-    )
-
-    # Linhas da placa solar
-    pygame.draw.line(
-        tela, (100, 160, 220),
-        (x, y - 24), (x, y + 12), 2
-    )
-
-    pygame.draw.line(
-        tela, (100, 160, 220),
-        (x - 28, y - 5), (x + 28, y - 5), 2
-    )
-
-    # Detalhes
-    pygame.draw.rect(
-        tela, VERDE_ESCURO,
-        (x - 5, y + 17, 10, 8)
-    )
-
-# Criar obstáculos
-def criar_obstaculo():
-
-    faixa = random.choice([-0.55, 0, 0.55])
-
-    obstaculos.append({
-        "y": 100,
-        "faixa": faixa,
-        "cor": random.choice([
-            VERMELHO, (40, 80, 230), (240, 200, 20)
-        ])
-    })
-
-# Criar energia solar
-def criar_sol():
-
-    faixa = random.choice([-0.55, 0, 0.55])
-
-    sois.append({
-        "y": 100,
-        "faixa": faixa
-    })
-
-# Loop principal
-while True:
-
-    relogio.tick(60)
-
-    for evento in pygame.event.get():
-
-        if evento.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-
-        if evento.type == pygame.KEYDOWN:
-
-            if evento.key == pygame.K_r and game_over:
-                carro_x = 400
-                energia = 100
-                pontos = 0
-                distancia = 0
-                obstaculos = []
-                sois = []
-                tempo = 0
-                game_over = False
-
-    teclas = pygame.key.get_pressed()
-
-    if not game_over:
-
-        tempo += 1
-        distancia += 1
-
-        # Movimento
-        if teclas[pygame.K_LEFT]:
-            carro_x -= velocidade
-
-        if teclas[pygame.K_RIGHT]:
-            carro_x += velocidade
-
-        carro_x = max(90, min(710, carro_x))
-
-        energia -= 0.025
-
-        # Criar obstáculos e energia
-        if random.randint(1, 55) == 1:
-            criar_obstaculo()
-
-        if random.randint(1, 75) == 1:
-            criar_sol()
-
-        # Atualizar obstáculos
-        for obj in obstaculos[:]:
-
-            obj["y"] += velocidade_pista
-
-            largura = largura_estrada(obj["y"])
-            x = 400 + obj["faixa"] * largura / 2
-
-            if obj["y"] > 600:
-                obstaculos.remove(obj)
-                pontos += 1
-
-            elif obj["y"] > 420 and abs(carro_x - x) < 45:
-                game_over = True
-
-        # Atualizar energia solar
-        for sol in sois[:]:
-
-            sol["y"] += velocidade_pista
-
-            largura = largura_estrada(sol["y"])
-            x = 400 + sol["faixa"] * largura / 2
-
-            if abs(sol["y"] - carro_y) < 35 and abs(carro_x - x) < 40:
-                energia = min(100, energia + 20)
-                pontos += 5
-                sois.remove(sol)
-
-            elif sol["y"] > 600:
-                sois.remove(sol)
-
-        if energia <= 0:
-            game_over = True
-
-    # Desenhar cenário
-    desenhar_cenario()
-
-    # Desenhar obstáculos
-    for obj in obstaculos:
-
-        largura = largura_estrada(obj["y"])
-        x = 400 + obj["faixa"] * largura / 2
-        tamanho = max(12, int(obj["y"] / 8))
-
-        pygame.draw.rect(
-            tela, obj["cor"],
-            (x - tamanho / 2, obj["y"],
-             tamanho, tamanho * 1.5),
-            border_radius=5
-        )
-
-    # Desenhar energia
-    for sol in sois:
-
-        largura = largura_estrada(sol["y"])
-        x = 400 + sol["faixa"] * largura / 2
-
-        pygame.draw.circle(
-            tela, AMARELO,
-            (int(x), int(sol["y"])), 12
-        )
-
-    # Carrinho
-    desenhar_carrinho(carro_x, carro_y)
-
-    # Informações
-    texto = fonte.render(
-        f"ENERGIA: {int(energia)}%   PONTOS: {pontos}",
-        True, BRANCO
-    )
-
-    tela.blit(texto, (15, 15))
-
-    # Barra de energia
-    pygame.draw.rect(tela, PRETO, (15, 50, 150, 18))
-    pygame.draw.rect(
-        tela, VERDE,
-        (15, 50, max(0, int(150 * energia / 100)), 18)
-    )
-
-    if game_over:
-
-        mensagem = fonte.render(
-            "FIM DE JOGO! Aperte R para reiniciar",
-            True, AMARELO
-        )
-
-        tela.blit(mensagem, (125, 290))
-
-    pygame.display.flip()
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super Carro Solar</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#101522;color:white;font-family:Arial,sans-serif}
+canvas{display:block;width:100vw;height:100dvh}
+.overlay{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;background:linear-gradient(#160f20aa,#080d19ed);z-index:5}
+h1{font-size:clamp(38px,9vw,65px);color:#ffbd54;text-shadow:0 4px 20px #ff5b24}
+p{margin:9px;color:#eee}
+button{border:0;border-radius:14px;padding:15px 30px;background:linear-gradient(135deg,#ff9d35,#e83229);color:white;font-size:19px;font-weight:bold;margin-top:18px;cursor:pointer}
+.hidden{display:none!important}
+#hud{position:fixed;top:16px;left:18px;right:18px;display:none;justify-content:space-between;font-weight:bold;text-shadow:0 2px 5px #000;pointer-events:none;z-index:2}
+.stat{font-size:13px}.stat strong{display:block;font-size:clamp(22px,5vw,32px);color:#ffc34f}
+#pauseBtn{position:fixed;top:12px;right:12px;display:none;margin:0;padding:9px 14px;background:#ffffff33;z-index:3}
+#controls{position:fixed;bottom:20px;left:0;right:0;display:none;justify-content:space-between;padding:0 20px;z-index:3}
+.ctrl{width:70px;height:65px;padding:0;margin:0;background:#ffffff30;border:2px solid #ffffff80;font-size:30px;touch-action:none}
+#hint{position:fixed;bottom:100px;left:0;right:0;text-align:center;color:#fff;text-shadow:0 2px 5px #000;font-size:13px;pointer-events:none;z-index:2}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="start" class="overlay">
+ <h1>SUPER CARRO</h1><p>☀️ CORRIDA SOLAR</p>
+ <p>Desvie dos carros e tente chegar ao fim!</p>
+ <button id="play">JOGAR</button>
+ <p>Use ◀ ▶ ou as teclas de seta para mudar de faixa.</p>
+</div>
+<div id="hud">
+ <div class="stat">SCORE<strong id="score">0</strong></div>
+ <div class="stat" style="text-align:center">VELOCIDADE<strong id="speed">80 KM/H</strong></div>
+ <div class="stat" style="text-align:right">TEMPO<strong id="timer">60</strong></div>
+</div>
+<button id="pauseBtn">Ⅱ</button>
+<div id="hint" class="hidden">Use ◀ ▶ para desviar dos carros</div>
+<div id="controls"><button class="ctrl" id="left">◀</button><button class="ctrl" id="right">▶</button></div>
+<div id="over" class="overlay hidden">
+ <h1 id="endTitle">FIM DE JOGO</h1><p>Sua pontuação:</p><h2 id="finalScore">0</h2>
+ <button id="again">JOGAR NOVAMENTE</button>
+</div>
+<div id="pause" class="overlay hidden"><h1>PAUSADO</h1><button id="resume">CONTINUAR</button></div>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+let W=innerWidth,H=innerHeight,dpr=1,active=false,paused=false;
+let lane=1,score=0,timeLeft=60,roadOffset=0,last=0,traffic=[],spawnTimer=0,speed=240;
+const lanes=3;
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}
+addEventListener('resize',resize);
+function poly(points,color){ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(...points[0]);for(const p of points.slice(1))ctx.lineTo(...p);ctx.closePath();ctx.fill()}
+function roadBounds(y){const t=(y-H*.28)/(H*.72);return {left:W*(.40-.22*t),right:W*(.60+.22*t)}}
+function laneX(index,y){const b=roadBounds(y);return b.left+(b.right-b.left)*(index+.5)/3}
+function drawCar(cx,cy,s,color='#e82e35',player=false){
+ ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);
+ ctx.fillStyle='#090d16a8';ctx.beginPath();ctx.ellipse(0,4,42,14,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#11151c';ctx.fillRect(-39,-38,12,45);ctx.fillRect(27,-38,12,45);
+ poly([[-32,-70],[32,-70],[42,-40],[40,8],[-40,8],[-42,-40]],color);
+ poly([[-25,-65],[25,-65],[21,-42],[-21,-42]],'#182b3b');
+ poly([[-20,-61],[20,-61],[17,-46],[-17,-46]],'#29465a');
+ ctx.fillStyle=player?'#ffcf68':'#ff7474';ctx.fillRect(-34,-24,10,8);ctx.fillRect(24,-24,10,8);
+ ctx.fillStyle='#971e2b';ctx.fillRect(-33,-10,66,9);
+ ctx.fillStyle='#fff0b1';ctx.fillRect(-10,-7,20,4);
+ ctx.fillStyle='#171b22';ctx.fillRect(-36,4,72,7);
+ ctx.shadowColor='#ff5a38';ctx.shadowBlur=14;ctx.fillStyle='#ff6a48';ctx.fillRect(-36,-25,6,8);ctx.fillRect(30,-25,6,8);ctx.shadowBlur=0;
+ ctx.restore();
+}
+function draw(){
+ let sky=ctx.createLinearGradient(0,0,0,H*.55);sky.addColorStop(0,'#f06b54');sky.addColorStop(.65,'#ffad70');sky.addColorStop(1,'#f7c28d');
+ ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+ const sx=W*.72,sy=H*.19;let glow=ctx.createRadialGradient(sx,sy,4,sx,sy,H*.27);glow.addColorStop(0,'#fff0b3aa');glow.addColorStop(1,'#ff9c5b00');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H*.55);
+ ctx.fillStyle='#ffe0a0';ctx.beginPath();ctx.arc(sx,sy,H*.055,0,Math.PI*2);ctx.fill();
+ // silhouette of city
+ for(let side=0;side<2;side++)for(let i=0;i<7;i++){
+  let base=H*(.39+i*.025),bw=W*(.06+i*.006),bh=H*(.12+i*.025),bx=side===0?i*W*.055:W-i*W*.055-bw;
+  ctx.fillStyle=i%2?'#302b36':'#49333a';ctx.fillRect(bx,base-bh,bw,bh);
+  ctx.fillStyle='#ffbd78';for(let wy=0;wy<3;wy++)for(let wx=0;wx<2;wx++)ctx.fillRect(bx+bw*(.18+wx*.42),base-bh*.78+wy*bh*.23,bw*.12,bh*.07);
+ }
+ const hy=H*.28;
+ poly([[W*.40,hy],[W*.60,hy],[W*1.08,H],[W*-.08,H]],'#30343a');
+ poly([[W*.40,hy],[W*.37,hy],[W*.04,H],[W*.17,H]],'#55464a');
+ poly([[W*.60,hy],[W*.63,hy],[W*.83,H],[W*.96,H]],'#55464a');
+ // Road edges
+ ctx.strokeStyle='#f3d9aa';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(W*.40,hy);ctx.lineTo(W*.17,H);ctx.moveTo(W*.60,hy);ctx.lineTo(W*.83,H);ctx.stroke();
+ // animated center and lane markings
+ ctx.strokeStyle='#f5e6c9';ctx.lineWidth=Math.max(3,W*.006);ctx.setLineDash([H*.035,H*.045]);ctx.lineDashOffset=-roadOffset;ctx.beginPath();ctx.moveTo(W*.5,hy);ctx.lineTo(W*.5,H);ctx.stroke();
+ for(let k=1;k<3;k++){ctx.beginPath();ctx.moveTo(W*(.40+.20*k/3),hy);ctx.lineTo(W*(.17+.66*k/3),H);ctx.stroke()}
+ ctx.setLineDash([]);
+ // traffic
+ for(const car of traffic){let y=car.y;drawCar(laneX(car.lane,y),y,Math.max(.45,Math.min(1.25,(y/H)*1.4)),car.color,false)}
+ const py=H*.82;drawCar(laneX(lane,py),py,Math.min(W,H)/500*1.18,'#e82e35',true);
+}
+function visible(id,on){document.getElementById(id).classList.toggle('hidden',!on)}
+function start(){score=0;timeLeft=60;lane=1;roadOffset=0;traffic=[];spawnTimer=.5;speed=240;active=true;paused=false;visible('start',false);visible('over',false);visible('pause',false);visible('hint',true);document.getElementById('hud').style.display='flex';document.getElementById('controls').style.display='flex';document.getElementById('pauseBtn').style.display='block';last=performance.now()}
+function finish(title='FIM DE JOGO'){active=false;document.getElementById('endTitle').textContent=title;document.getElementById('finalScore').textContent=Math.floor(score);visible('over',true);document.getElementById('hud').style.display='none';document.getElementById('controls').style.display='none';document.getElementById('pauseBtn').style.display='none';visible('hint',false)}
+function move(n){if(active&&!paused)lane=Math.max(0,Math.min(2,lane+n))}
+document.getElementById('play').onclick=start;document.getElementById('again').onclick=start;
+document.getElementById('left').onpointerdown=e=>{e.preventDefault();move(-1)};
+document.getElementById('right').onpointerdown=e=>{e.preventDefault();move(1)};
+document.getElementById('pauseBtn').onclick=()=>{if(active){paused=true;visible('pause',true)}};
+document.getElementById('resume').onclick=()=>{paused=false;visible('pause',false);last=performance.now()};
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='a')move(-1);if(e.key==='ArrowRight'||e.key==='d')move(1);if(e.key==='Escape'&&active){paused=!paused;visible('pause',paused);last=performance.now()}});
+function loop(now){let dt=Math.min((now-last)/1000||.016,.05);last=now;
+ if(active&&!paused){
+  timeLeft-=dt;roadOffset+=speed*dt;spawnTimer-=dt;score+=dt*10;speed=Math.min(420,240+score*.25);
+  if(spawnTimer<=0){traffic.push({lane:Math.floor(Math.random()*3),y:H*.30,color:['#e7a347','#4f9bc4','#a85b75','#d7d2c5'][Math.floor(Math.random()*4)]});spawnTimer=Math.max(.65,1.25-score/500)}
+  for(let c of traffic)c.y+=speed*dt*.48;
+  traffic=traffic.filter(c=>c.y<H+100);
+  // Collision check near player
+  for(const c of traffic)if(c.lane===lane&&c.y>H*.72&&c.y<H*.88){finish('BATEU!');break}
+  document.getElementById('score').textContent=Math.floor(score);document.getElementById('timer').textContent=Math.max(0,Math.ceil(timeLeft));document.getElementById('speed').textContent=Math.floor(speed/3.6)+' KM/H';
+  if(timeLeft<=0)finish('TEMPO ESGOTADO');
+ }
+ draw();requestAnimationFrame(loop)}
+resize();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
