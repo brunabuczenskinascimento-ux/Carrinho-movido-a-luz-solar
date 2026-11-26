@@ -1,0 +1,351 @@
+Python
+
+import pygame
+import random
+import sys
+
+pygame.init()
+
+# Tela
+LARGURA = 800
+ALTURA = 600
+tela = pygame.display.set_mode((LARGURA, ALTURA))
+pygame.display.set_caption("SUPER CARRINHO SOLAR")
+
+relogio = pygame.time.Clock()
+
+# Cores
+AZUL = (100, 180, 220)
+VERDE = (30, 210, 65)
+VERDE_ESCURO = (15, 120, 40)
+PRETO = (15, 15, 20)
+BRANCO = (245, 245, 220)
+AMARELO = (255, 220, 0)
+CINZA = (65, 85, 100)
+VERMELHO = (220, 30, 40)
+
+fonte = pygame.font.SysFont("Arial", 25, bold=True)
+
+# Jogador
+carro_x = 400
+carro_y = 465
+velocidade = 6
+
+energia = 100
+pontos = 0
+distancia = 0
+
+obstaculos = []
+sois = []
+
+velocidade_pista = 6
+tempo = 0
+
+game_over = False
+
+# Posição da estrada
+def centro_estrada(y):
+    return 400
+
+def largura_estrada(y):
+    return 70 + (y / ALTURA) * 650
+
+# Desenhar cenário
+def desenhar_cenario():
+
+    tela.fill((100, 180, 220))
+
+    # Sol no céu
+    pygame.draw.circle(tela, AMARELO, (680, 65), 35)
+
+    # Prédios
+    for lado in [0, 1]:
+        for i in range(8):
+            x = i * 55
+
+            if lado == 0:
+                predio = pygame.Rect(x, 70, 48, 330)
+            else:
+                predio = pygame.Rect(752 - x, 70, 48, 330)
+
+            cor = random.choice([
+                (40, 50, 75),
+                (60, 65, 85),
+                (35, 70, 90)
+            ])
+
+            pygame.draw.rect(tela, cor, predio)
+
+            # Janelas
+            for j in range(4):
+                for k in range(6):
+                    wx = predio.x + 8 + j * 10
+                    wy = predio.y + 15 + k * 45
+
+                    pygame.draw.rect(
+                        tela, (180, 190, 150),
+                        (wx, wy, 6, 12)
+                    )
+
+    # Estrada
+    pygame.draw.polygon(
+        tela, CINZA,
+        [(370, 90), (430, 90), (800, 600), (0, 600)]
+    )
+
+    # Calçadas
+    pygame.draw.polygon(
+        tela, (90, 95, 110),
+        [(340, 90), (370, 90), (0, 600), (0, 600)]
+    )
+
+    pygame.draw.polygon(
+        tela, (90, 95, 110),
+        [(430, 90), (460, 90), (800, 600), (800, 600)]
+    )
+
+    # Laterais da pista
+    pygame.draw.line(tela, BRANCO, (370, 90), (0, 600), 4)
+    pygame.draw.line(tela, BRANCO, (430, 90), (800, 600), 4)
+
+    # Linhas da pista
+    for i in range(9):
+        y = (i * 75 + tempo * 5) % 600
+
+        largura = largura_estrada(y)
+        centro = 400
+
+        for posicao in [1/3, 2/3]:
+            x = centro - largura / 2 + largura * posicao
+
+            tamanho = max(2, int(y / 35))
+
+            pygame.draw.line(
+                tela, BRANCO,
+                (400 + (x - 400) * 0.2, 90),
+                (x, y),
+                tamanho
+            )
+
+# Desenhar carrinho solar
+def desenhar_carrinho(x, y):
+
+    # Sombra
+    pygame.draw.ellipse(
+        tela, (20, 30, 40),
+        (x - 48, y + 25, 100, 30)
+    )
+
+    # Rodas
+    pygame.draw.rect(
+        tela, PRETO, (x - 48, y - 5, 22, 65),
+        border_radius=7
+    )
+
+    pygame.draw.rect(
+        tela, PRETO, (x + 26, y - 5, 22, 65),
+        border_radius=7
+    )
+
+    # Base verde do carrinho
+    pygame.draw.polygon(
+        tela, VERDE,
+        [
+            (x - 42, y + 5),
+            (x - 35, y - 30),
+            (x + 35, y - 30),
+            (x + 42, y + 5),
+            (x + 42, y + 35),
+            (x - 42, y + 35)
+        ]
+    )
+
+    # Placa solar
+    pygame.draw.polygon(
+        tela, (15, 35, 75),
+        [
+            (x - 29, y - 25),
+            (x + 29, y - 25),
+            (x + 27, y + 12),
+            (x - 27, y + 12)
+        ]
+    )
+
+    # Linhas da placa solar
+    pygame.draw.line(
+        tela, (100, 160, 220),
+        (x, y - 24), (x, y + 12), 2
+    )
+
+    pygame.draw.line(
+        tela, (100, 160, 220),
+        (x - 28, y - 5), (x + 28, y - 5), 2
+    )
+
+    # Detalhes
+    pygame.draw.rect(
+        tela, VERDE_ESCURO,
+        (x - 5, y + 17, 10, 8)
+    )
+
+# Criar obstáculos
+def criar_obstaculo():
+
+    faixa = random.choice([-0.55, 0, 0.55])
+
+    obstaculos.append({
+        "y": 100,
+        "faixa": faixa,
+        "cor": random.choice([
+            VERMELHO, (40, 80, 230), (240, 200, 20)
+        ])
+    })
+
+# Criar energia solar
+def criar_sol():
+
+    faixa = random.choice([-0.55, 0, 0.55])
+
+    sois.append({
+        "y": 100,
+        "faixa": faixa
+    })
+
+# Loop principal
+while True:
+
+    relogio.tick(60)
+
+    for evento in pygame.event.get():
+
+        if evento.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+        if evento.type == pygame.KEYDOWN:
+
+            if evento.key == pygame.K_r and game_over:
+                carro_x = 400
+                energia = 100
+                pontos = 0
+                distancia = 0
+                obstaculos = []
+                sois = []
+                tempo = 0
+                game_over = False
+
+    teclas = pygame.key.get_pressed()
+
+    if not game_over:
+
+        tempo += 1
+        distancia += 1
+
+        # Movimento
+        if teclas[pygame.K_LEFT]:
+            carro_x -= velocidade
+
+        if teclas[pygame.K_RIGHT]:
+            carro_x += velocidade
+
+        carro_x = max(90, min(710, carro_x))
+
+        energia -= 0.025
+
+        # Criar obstáculos e energia
+        if random.randint(1, 55) == 1:
+            criar_obstaculo()
+
+        if random.randint(1, 75) == 1:
+            criar_sol()
+
+        # Atualizar obstáculos
+        for obj in obstaculos[:]:
+
+            obj["y"] += velocidade_pista
+
+            largura = largura_estrada(obj["y"])
+            x = 400 + obj["faixa"] * largura / 2
+
+            if obj["y"] > 600:
+                obstaculos.remove(obj)
+                pontos += 1
+
+            elif obj["y"] > 420 and abs(carro_x - x) < 45:
+                game_over = True
+
+        # Atualizar energia solar
+        for sol in sois[:]:
+
+            sol["y"] += velocidade_pista
+
+            largura = largura_estrada(sol["y"])
+            x = 400 + sol["faixa"] * largura / 2
+
+            if abs(sol["y"] - carro_y) < 35 and abs(carro_x - x) < 40:
+                energia = min(100, energia + 20)
+                pontos += 5
+                sois.remove(sol)
+
+            elif sol["y"] > 600:
+                sois.remove(sol)
+
+        if energia <= 0:
+            game_over = True
+
+    # Desenhar cenário
+    desenhar_cenario()
+
+    # Desenhar obstáculos
+    for obj in obstaculos:
+
+        largura = largura_estrada(obj["y"])
+        x = 400 + obj["faixa"] * largura / 2
+        tamanho = max(12, int(obj["y"] / 8))
+
+        pygame.draw.rect(
+            tela, obj["cor"],
+            (x - tamanho / 2, obj["y"],
+             tamanho, tamanho * 1.5),
+            border_radius=5
+        )
+
+    # Desenhar energia
+    for sol in sois:
+
+        largura = largura_estrada(sol["y"])
+        x = 400 + sol["faixa"] * largura / 2
+
+        pygame.draw.circle(
+            tela, AMARELO,
+            (int(x), int(sol["y"])), 12
+        )
+
+    # Carrinho
+    desenhar_carrinho(carro_x, carro_y)
+
+    # Informações
+    texto = fonte.render(
+        f"ENERGIA: {int(energia)}%   PONTOS: {pontos}",
+        True, BRANCO
+    )
+
+    tela.blit(texto, (15, 15))
+
+    # Barra de energia
+    pygame.draw.rect(tela, PRETO, (15, 50, 150, 18))
+    pygame.draw.rect(
+        tela, VERDE,
+        (15, 50, max(0, int(150 * energia / 100)), 18)
+    )
+
+    if game_over:
+
+        mensagem = fonte.render(
+            "FIM DE JOGO! Aperte R para reiniciar",
+            True, AMARELO
+        )
+
+        tela.blit(mensagem, (125, 290))
+
+    pygame.display.flip()
